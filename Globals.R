@@ -10,6 +10,10 @@ proj4_master = "+proj=lcc +lat_1=25 +lat_2=60 +lat_0=42.5 +lon_0=-100 +x_0=0 +y_
 # Location of large spatial data sets
 spatial_data_dir = "E:/Data/spatial_data/"
 
+# Where to write derived spatial data
+spatial_data_output_dir = "E:/Data/derived_spatial_data/"
+
+
 # Location of the databasin pine kill data sets
 databasin_dir = "E:/Data/Databasin/"
 
