@@ -1,0 +1,10 @@
+legend labels - 
+fix pine killed legend date range
+square panels in aggregate stat plots
+average of x preceeding years
+
+
+overlay kill and survival maps in same pane - nonoverlapping colors for each data set
+
+
+

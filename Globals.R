@@ -1,6 +1,9 @@
 # The years for which we have pine kill data from the Databasin data sets
 kill_years = 1997:2010
 
+# The years for which we have Daymet data:
+daymet_years = 1980:2016
+
 # Proj4string for lon/lat projection
 proj4_lon_lat = "+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"
 
