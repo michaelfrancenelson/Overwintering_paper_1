@@ -27,7 +27,7 @@ daymet_output_dir = "E:/Data/Daymet/daymet_output/"
 daymet_dir = "E:/Data/Daymet/"
 
 # local data dir
-local_dat_dir = "data/"
+local_dat_dir = "../data/"
 
 
 # Shapefile layer name for the US National Parks
