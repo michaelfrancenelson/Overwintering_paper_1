@@ -68,27 +68,48 @@ aTSA::adf.test(kill_survival_agg[lookback == 1, log(kill)])
 
 # Model fits: lm and lm with ARIMA errors ------------------------------------------------------------
 # Big data tables to hold the model objects and the residuals
+
+kill_survival_agg[, survival100 := 100 * survival]
 models = rbind(
-  kill_survival_agg[ , .(model = list(lm(kill ~ survival, data = .SD)), type = "lm", transform = "none"), by = "lookback"],
-  kill_survival_agg[ , .(model = list(lm(log(kill) ~ survival, data = .SD)), type = "lm", transform = "log"), by = "lookback"],
-  kill_survival_agg[ , .(model = list(forecast::auto.arima(kill, xreg = survival)), type = "arima", transform = "none"), by = "lookback"],
-  kill_survival_agg[ , .(model = list(forecast::auto.arima(log(kill), xreg = survival)), type = "arima", transform = "log"), by = "lookback"]
+  kill_survival_agg[ , .(model = list(lm(kill ~ survival100, data = .SD)), type = "lm", transform = "none"), by = "lookback"],
+  kill_survival_agg[ , .(model = list(lm(log(kill) ~ survival100, data = .SD)), type = "lm", transform = "log"), by = "lookback"],
+  kill_survival_agg[ , .(model = list(forecast::auto.arima(kill, xreg = survival100)), type = "auto", transform = "none"), by = "lookback"],
+  kill_survival_agg[ , .(model = list(forecast::auto.arima(log(kill), xreg = survival100)), type = "auto", transform = "log"), by = "lookback"],
+  kill_survival_agg[ , .(model = list(forecast::Arima(kill, order = c(1, 0, 0), xreg = survival100)), type = "arima", transform = "none"), by = "lookback"],
+  kill_survival_agg[ , .(model = list(forecast::Arima(log(kill), order = c(1, 0, 0), xreg = survival100)), type = "arima", transform = "log"), by = "lookback"]
 )
 models$aic = sapply(models$model, function(x) AIC(x))
-
+models$RMSE = sapply(models$model, function(x) forecast::accuracy(x)[1, "RMSE"])
 # Make sure lookback is a numeric variable
 models[, lookback := as.numeric(lookback)]
 kill_survival_agg[, lookback:= as.numeric(lookback)]
 
 # table of residuals, in melted format
-model_residuals = models[, .(fitted_vals = fitted.values(model[[1]]), residuals = model[[1]]$residuals, year = 1997:2010), by = list(lookback, type, transform)]
+model_residuals = models[, .(fitted_vals = fitted.values(model[[1]]), residuals = residuals(model[[1]]), year = 1997:2010), by = list(lookback, type, transform)]
 model_residuals = merge(kill_survival_agg, model_residuals)
 
 kill_survival_agg
 model_residuals
 
+mm = models[type == "arima" & transform == "log"][9, model][[1]]
+str(mm, 1)
+forecast::accuracy(models[type == "arima" & transform == "log"][1, model][[1]])$RSME
+aa = forecast::accuracy(models[type == "auto" & transform == "log"][1, model][[1]])
+forecast::accuracy(models[type == "lm" & transform == "log"][1, model][[1]])
+
+str(aa)
+aa[1, "RMSE"]
+
+
+residuals(models[type == "arima" & transform == "log"][9, model][[1]])
+fitted.values(models[type == "arima" & transform == "log"][9, model][[1]])
+residuals(models[type == "auto" & transform == "log"][9, model][[1]])
+models[type == "auto" & transform == "log"][9, model][[1]]
+fitted.values(models[type == "auto" & transform == "log"][9, model][[1]])
+
 # Table of model coeffs and info for different lookbacks  -------------------
 arimas_dt = models[transform == "log" & type == "arima"] 
+arimas_dt = models[transform == "log" & type == "auto"] 
 arimas_dt[, p := get_p(model, lookback), by = lookback]
 arimas_dt[, c := get_c(model, lookback), by = lookback]
 # arimas_dt[, me := get_me(model), by = lookback]
@@ -117,25 +138,44 @@ aes_p = aes(y = p)
 aes_me = aes(y = me)
 aes_c = aes(y = c)
 aes_ssr = aes(y = ssr)
+aes_rmse = aes(y = RMSE)
 t1 = theme(axis.title.x = element_blank(), axis.text.x = element_blank())
 
 gg_arimas = ggplot(arimas_dt, aes(x = lookback))
 
 gg_arimas + aes_aic
 
+gg_arimas + aes_rmse + geom_line()
 
 gg_arimas + aes_aic + geom_line() + geom_point()
 
 gg_aic = ggplotGrob(gg_arimas + aes_aic + geom_line() + geom_point() + ylab("AIC"))
 gg_ssr = ggplotGrob(gg_arimas + aes_ssr + geom_line() + geom_point() + ylab("SSqResid") + t1)
 
+gg_arimas + aes_aic + geom_line() + geom_point(mapping = aes(shape = sig)) + ylab("AIC")
+
+grid.draw(gg_aic)
 gg_arimas
 
 
 
-gg_me = ggplotGrob(gg_arimas + aes_me + gg_line + ylab("Mean Error") + t1 + scale_y_logg_arimas0())
+
+gg_line = geom_line() + geom_point()
+
+gg_me = ggplotGrob(gg_arimas + aes_me +  + ylab("Mean Error") + t1 + scale_y_logg_arimas0())
+gg_rmse = ggplotGrob(gg_arimas + aes_rmse + gg_line + ylab("RMSE") + t1 + scale_y_logg_arimas0())
 gg_p   = ggplotGrob(gg_arimas + aes_p + gg_line + scale_y_logg_arimas0() + t1 + ylab("p") + geom_hline(aes(yintercept = 0.05), linetype = 3))
 gg_c   = ggplotGrob(gg_arimas + aes_c + gg_line + t1 + ylab("coef"))
+
+gg_me = ggplotGrob(gg_arimas + aes_me +  + ylab("Mean Error") + t1)
+gg_rmse = ggplotGrob(gg_arimas + aes_rmse + gg_line + ylab("RMSE") + t1 + scale_y_logg_arimas0())
+gg_p   = ggplotGrob(gg_arimas + aes_p + gg_line + scale_y_logg_arimas0() + t1 + ylab("p") + geom_hline(aes(yintercept = 0.05), linetype = 3))
+gg_c   = ggplotGrob(gg_arimas + aes_c + gg_line + t1 + ylab("coef"))
+
+
+
+
+
 
 gg_all = rbind(gg_c, gg_p, gg_ssr, gg_aic, size = "first")
 gg_all = rbind(gg_c, gg_p, gg_aic, size = "first")
