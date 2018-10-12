@@ -53,13 +53,18 @@ kill_breaks = c(1997, 2000, 2003, 2006, 2010)
 color_scale_years = scale_color_continuous(breaks = kill_breaks, labels = kill_breaks)
 color_scale_years = scale_color_discrete(breaks = kill_breaks, labels = kill_breaks)
 
-g1_c = ggplot(kill_survival_agg[lookback %in% lookbacks], aes(x = survival, y = kill, color = year, label = year))
-g2_c = ggplot(kill_survival_agg[lookback %in% lookbacks], aes(x = survival, y = log(kill), color = year))
+
+kill_survival_agg[, class(year)]
+
+g1_c = ggplot(kill_survival_agg[lookback %in% lookbacks], 
+              aes(x = survival, y = kill, color = year, label = year))
+g2_c = ggplot(kill_survival_agg[lookback %in% lookbacks], 
+              aes(x = survival, y = log(kill), color = year))
 
 pdf(file = paste0(figures_dir, "lookback_panels.pdf"), height = 9, width = 9)
-g1 + geom_point() + f2 + geom_text_repel() + x1 + y1 + t1
+# g1 + geom_point() + f2 + geom_text_repel() + x1 + y1 + t1
 g1 + geom_point() + f2 + scale_y_log10() + geom_text_repel()  + x1 + y1 + t1
-g1_c + geom_point(size = 3) + f2 + x1 + y1 + t1 + color_scale_years
+# g1_c + geom_point(size = 3) + f2 + x1 + y1 + t1 + color_scale_years
 g1_c + geom_point(size = 3) + f2 + scale_y_log10()  + x1 + y1 + t1  + color_scale_years
 dev.off()
 

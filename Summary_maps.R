@@ -16,7 +16,9 @@
   source("Globals.R")
   
   national_forests_poly = readOGR(dsn = paste0(spatial_data_output_dir, "national_forests_in_mpb_states"), layer = "national_forests_in_mpb_states")
+  
   states_poly = readOGR(dsn = paste0(spatial_data_output_dir, "mpb_states"), layer = "mpb_states")
+  
   
   # pre-make ggplot objects for the polygons
   g_nf = geom_polypath(data = national_forests_poly, aes(long, lat, group = group), color = 1, fill = rgb(0, 0, 0, 0))
@@ -138,17 +140,26 @@
   # mean pine kill blue to red:
   # Custom red and blue color ramps
   ramp_red_mean = colorRampPalette(c(
+    rgb(1, 1, 1), 
+    # rgb(1, 0.85, 0.85), 
     rgb(1, 0.75, 0.75), 
     rgb(1, 0.5, 0.5), 
+    rgb(1, 0.25, 0.25), 
     rgb(1, 0, 0), 
-    rgb(0.65, 0, 0), 
-    rgb(0.2, 0, 0)))
+    rgb(0.85, 0, 0), 
+    rgb(0.5, 0, 0), 
+    rgb(0.2, 0, 0), 
+    rgb(0.15, 0, 0), 
+    rgb(0.1, 0, 0)))
   ramp_blue_mean = colorRampPalette(c(
     rgb(0, 0, 0.2), 
     rgb(0, 0, 1), 
+    rgb(0.25, 0.25, 1), 
     rgb(0.5, 0.5, 1), 
-    rgb(0.75, 0.75, 1)))
-  cols_mean = c(ramp_blue_mean(10), ramp_red_mean(15))
+    rgb(0.75, 0.75, 1)))#,
+    # rgb(0.85, 0.85, 1),
+    # rgb(0.95, 0.95, 1)))
+  cols_mean = c(ramp_blue_mean(12), ramp_red_mean(12))
   scale_color_mean = scale_fill_gradientn(
     colours = cols_mean, 
     na.value = rgb(0, 0, 0, 0), 
@@ -184,6 +195,8 @@
       g_rast + states_poly_gray_1 + scale_color_mean 
   }
   
+  ggplot_mean(1, 1)
+  
   ggplot_mean_kill_years  = function(map_scale, bar_scale = 3, legend_bar_base_height = 1.5, legend_bar_base_width = 18) 
   {
     gplot_mean_kill_years + coord_fixed() + scaled_theme(map_scale) +
@@ -207,6 +220,10 @@
   gplot_sd = gplot(sd_winter_tmin, maxpixels = maxpixels)
   gplot_sd_kill_years = gplot(sd_winter_tmin_kill_years, maxpixels = maxpixels)
   
+  sd_winter_tmin_truncated = sd_winter_tmin
+  sd_winter_tmin_truncated[sd_winter_tmin_truncated[] > 6] = 6
+  gplot_sd_truncated = gplot(sd_winter_tmin_truncated, maxpixels = maxpixels)
+  
   # The few values at the high and low ends distort the color scale
   # Legend labels and breaks:
   range(sd_winter_tmin[], na.rm = T)
@@ -217,32 +234,45 @@
   breaks_sd = c( 1.5, 6, 10, 13)
   breaks_sd_kill_years = c( 1, 4, 7, 10)
   
+  breaks_sd_truncated = 0:6
+  labels_sd_truncated = c(0:5, ">6")
+  
   # We won't use this for the submitted figure
   
   # Custom red and blue color ramps
   ramp_red_sd = colorRampPalette(c(
+    rgb(1, 0.85, 0.85),
     rgb(1, 0.75, 0.75),
     rgb(1, 0.5, 0.5), 
     rgb(1, 0, 0), 
     rgb(0.65, 0, 0), 
     rgb(0.2, 0, 0)))
   ramp_blue_sd = colorRampPalette(c(
-    rgb(0, 0, 0.2), 
+    # rgb(0, 0, 0.2), 
+    rgb(0, 0, 0.5), 
     rgb(0, 0, 1), 
+    rgb(0.25, 0.25, 1),
     rgb(0.5, 0.5, 1),
-    rgb(0.75, 0.75, 1)))
-  cols_sd = c(ramp_blue_sd(8), ramp_red_sd(25))
+    rgb(0.75, 0.75, 1),
+    rgb(0.85, 0.85, 1)))
+  cols_sd = c(ramp_blue_sd(12), ramp_red_sd(12))
   scale_color_sd = scale_fill_gradientn(
     colours = cols_sd, 
     na.value = rgb(0, 0, 0, 0), 
     breaks = breaks_sd, 
     labels = breaks_sd)
+  
+  scale_color_sd_truncated = scale_fill_gradientn(
+    colours = cols_sd, 
+    na.value = rgb(0, 0, 0, 0), 
+    breaks = breaks_sd_truncated, 
+    labels = labels_sd_truncated)
+  
   scale_color_sd_kill_years = scale_fill_gradientn(
     colours = cols_sd, 
     na.value = rgb(0, 0, 0, 0), 
     breaks = breaks_sd_kill_years, 
     labels = breaks_sd_kill_years)
-  
   
   # We won't use this for the submitted figure
   tit_sd = ggtitle("Standard deviation of winter minimum temperature", subtitle = "1980 - 2016")
@@ -257,8 +287,23 @@
       title.hjust = 0.5,
       label.position = "top"))
   
-  
   map_scale = 1
+  
+  ggplot_sd_truncated = function(map_scale, bar_scale = 3, legend_bar_base_height = 1.5, legend_bar_base_width = 18)
+  {
+    gplot_sd_truncated + coord_fixed() + scaled_theme(map_scale) +
+      guides(
+        fill = guide_colourbar(
+          title = leg_tit_sd,
+          title.position = "bottom", 
+          title.hjust = 0.5,
+          barheight = map_scale * legend_bar_base_height / bar_scale,
+          barwidth = map_scale * legend_bar_base_width / bar_scale,
+          label.position = "top")) +
+      g_rast + states_poly_gray_1 + scale_color_sd_truncated
+  }
+  
+  ggplot_sd_truncated(1, 1)
   
   
   ggplot_sd = function(map_scale, bar_scale = 3, legend_bar_base_height = 1.5, legend_bar_base_width = 18)
@@ -336,12 +381,21 @@
                                       color = gray(0, alpha = 0.75), fill = rgb(0, 0, 0, 0))
   
   # Custom red and blue color ramps
+  # ramp_red_pine_sum = colorRampPalette(c(
+  #   rgb(1, 0.75, 0.75),
+  #   rgb(1, 0.35, 0.35),
+  #   rgb(1, 0.05, 0.05),
+  #   rgb(1, 0, 0), 
+  #   rgb(0.35, 0, 0)))
   ramp_red_pine_sum = colorRampPalette(c(
-    rgb(1, 0.75, 0.75),
-    rgb(1, 0.35, 0.35),
-    rgb(1, 0.05, 0.05),
-    rgb(1, 0, 0), 
+    rgb(1, 0.75, 0),
+    rgb(1, 0.35, 0),
+    rgb(1, 0.05, 0),
+    rgb(1, 0, 0),
     rgb(0.35, 0, 0)))
+  
+  
+  plot(0, 0, cex = 20, pch = 16, col = rgb(1, 0.05, 0.0))
   
   ramp_red_pine_sum_2 = colorRampPalette(c(
     # rgb(1, 0.75, 0.75),
@@ -376,127 +430,15 @@
           barheight = map_scale * legend_bar_base_height / bar_scale,
           barwidth = map_scale * legend_bar_base_width / bar_scale,
           label.position = "top")) +
-      g_rast + states_poly_pine_sum + scale_color_pine_sum_2 
+      # g_rast + states_poly_pine_sum + scale_color_pine_sum_2 
+      g_rast + states_poly_pine_sum + scale_color_pine_sum
   }
+  ggplot_pine_sum(1, 1)
 }
 
 
-# Year 2000 maps -------------------------------
-{
-  pine_red_stage_year = 2001; pine_kill_year = pine_red_stage_year - 1
-  
-  # red-stage in 2000, kill from previous summer.
-  pine_layer = which(kill_years == pine_red_stage_year)
-  surv_layer = which(daymet_years == pine_red_stage_year - 1)  
-  
-  plot(subset(pine_brick, pine_layer))
-  plot(subset(survival_brick, surv_layer))
-  
-  pine_2k = subset(pine_brick, pine_layer)
-  pine_2k[pine_2k[] == 0] = NA
-  
-  # This already has NA values outside the mask
-  surv_2k = subset(survival_brick, surv_layer)
-  
-  
-  # I can'f figure out how to overplot one raster on top of another with a different color scale,
-  # so use a hack of converting the pine to a data frame and plot with a square-shaped point
-  pine_2k_df = data.table(raster::as.data.frame(pine_2k, xy = T))
-  names(pine_2k_df)[3] = "kill"
-  
-  
-  # eliminate the NAs and the zeroes (they cause problems with the log scaling below)
-  pine_2k_df = pine_2k_df[complete.cases(pine_2k_df),,]
-  pine_2k_df = pine_2k_df[kill > 1]
-  
-  # new scale and breaks needed
-  boxplot(pine_2k_df$kill)
-  summary(pine_2k_df$kill)
-  breaks_pine_2k = c(2, 10, 100, 1000, 16000)
-  
-  gplot_surv_2k = gplot(surv_2k, maxpixels = maxpixels)
-  ggplot_pine_2k = ggplot(pine_2k_df, aes(x, y, color = kill))
-  
-  # Colors
-  scale_color_pine_2k = scale_color_gradientn(
-    colours = cols_pine_2, na.value = rgb(0, 0, 0, 0), 
-    breaks = breaks_pine_2k, labels = breaks_pine_2k, trans = "log")
-  
-  
-  breaks_surv = seq(0, 1, len = 6)
-  labels_surv = paste0(100 * breaks_surv, "")
-  
-  cols_surv = terrain.colors(10)[-c(5:7)]
-  # cols_surv = topo.colors(10)
-  
-  # 
-  # plot(1:10, col = terrain.colors(10), pch = 16)
-  # 
-  # cols_surv = c(
-  #   rgb(0, 0, .1, 1),
-  #   # rgb(0, 0, .6, 1),
-  #   rgb(0, 0, .5, 1),
-  #   rgb(0, 0, .8, 1),
-  #   rgb(0, 0, .9, 1),
-  #   rgb(0.1, 0.1, .9, 1),
-  #   rgb(0.2, 0.2, .9, 1),
-  #   rgb(0.3, 0.3, .9, 1),
-  #   rgb(0.4, 0.4, .9, 1),
-  #   rgb(0.5, 0.5, .9, 1),
-  #   rgb(.7, .7, .9, 1),
-  #   rgb(.9, .9, .9, 1),
-  #   rgb(.7, .9, .7, 1),
-  #   rgb(.5, .9, .5, 1),
-  #   rgb(.3, .9, .3, 1),
-  #   rgb(.2, .9, .2, 1),
-  #   rgb(0, 0.9, 0, 1),
-  #   rgb(0, 0.7, 0, 1),
-  #   rgb(0, 0.5, 0, 1))
-  
-  
-  scale_fill_surv_2k = scale_fill_gradientn(
-    colours = cols_surv, 
-    na.value = rgb(0, 0, 0, 0), 
-    breaks = breaks_surv, 
-    labels = labels_surv)
-  
-  # Legend color bar options:
-  leg_tit_surv = "% MPB overwinter survival"
-  leg_tit_pine_2k = "MPB pine mortality"
-  
-  ggplot_pine_surv = function(
-    map_scale, bar_scale = 3, 
-    marg = 25,
-    legend_bar_base_height = 1.5, legend_bar_base_width = 18,
-    point_size = 0.01,
-    point_alpha = 0.5)
-  {
-    gplot_surv_2k + g_rast + scale_fill_surv_2k + coord_fixed() + g_rast + 
-      states_poly_gray_1 + 
-      geom_point(data = pine_2k_df, aes(x, y, color = kill), size = point_size, alpha = point_alpha) + 
-      scale_color_pine_2k +
-      scaled_theme(map_scale, marg) +
-      guides(
-        fill = guide_colourbar(
-          title = leg_tit_surv,
-          title.position = "bottom",
-          title.hjust = 0.5,
-          barheight = map_scale * legend_bar_base_height / bar_scale,
-          barwidth = map_scale * legend_bar_base_width / bar_scale,
-          label.position = "top"),
-        color = guide_colourbar(
-          title = leg_tit_pine_2k,
-          title.position = "bottom", 
-          title.hjust = 0.5,
-          barheight = map_scale * legend_bar_base_height / bar_scale,
-          barwidth = map_scale * legend_bar_base_width / bar_scale,
-          label.position = "top"))
-  }
-}
 
-ggplot_pine_surv(1)
 
-ggplot_pine_surv(map_scale, bar_scale_2k, marg = 40, point_size = 0.005, point_alpha = 0.1)
 # Save figures -------------------------
 {
   map_scale = 3
@@ -504,6 +446,7 @@ ggplot_pine_surv(map_scale, bar_scale_2k, marg = 40, point_size = 0.005, point_a
   bar_scale_2k = 2.2
   grob_mean = ggplot_mean(map_scale, bar_scale)
   grob_sd = ggplot_sd(map_scale, bar_scale)
+  grob_sd_truncated = ggplot_sd_truncated(map_scale, bar_scale)
   grob_mean_kill_years = ggplot_mean_kill_years(map_scale, bar_scale)
   grob_sd_kill_years = ggplot_sd_kill_years(map_scale, bar_scale)
   grob_pine_sum = ggplot_pine_sum(map_scale, bar_scale)
@@ -532,7 +475,7 @@ ggplot_pine_surv(map_scale, bar_scale_2k, marg = 40, point_size = 0.005, point_a
   
   
   png("figures/summary_maps_panels.png", width = map_scale * 2.5 * width_png, height = map_scale * height_png)
-  grid.arrange(grob_mean, grob_sd, grob_pine_sum, nrow = 1)
+  grid.arrange(grob_mean, grob_sd_truncated, grob_pine_sum, nrow = 1)
   dev.off()
   
   png("figures/summary_maps_panels_kill_years.png", width = map_scale * 2.5 * width_png, height = map_scale * height_png)
@@ -581,3 +524,17 @@ ggplot_pine_surv(map_scale, bar_scale_2k, marg = 40, point_size = 0.005, point_a
   dev.off()
   
 }
+
+# Figures with gtable ----
+
+ggg_mean = ggplotGrob(ggplot_mean(map_scale, bar_scale))
+ggg_sd_truncated = ggplotGrob(ggplot_sd_truncated(map_scale, bar_scale))
+ggg_pine_kill = ggplotGrob(ggplot_pine_sum(map_scale, bar_scale))
+
+g_all = cbind(ggg_mean, ggg_sd_truncated, ggg_pine_kill, size = "first")
+
+png("figures/summary_maps_panels_big.png", width = map_scale * 2.5 * width_png, height = map_scale * height_png)
+grid.newpage(); grid.draw(g_all)
+dev.off()
+
+
