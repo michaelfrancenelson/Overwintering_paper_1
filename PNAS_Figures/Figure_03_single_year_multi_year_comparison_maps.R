@@ -53,7 +53,7 @@
 {
   lon_lat_col = gray(0.8, 0.4)
   
-  maxpixels = 1e6
+  maxpixels = 1e5
   g_rast_legend = geom_raster(aes(fill = value), show.legend = T)
   g_rast_no_legend = geom_raster(aes(fill = value), show.legend = F)
   
@@ -159,6 +159,38 @@
 
 # lat/long ----
 gg_lat_lon = geom_polypath(data = lon_lat_lines, aes(long, lat, group = group), color = lon_lat_col, fill = rgb(0,0,0,0))
+
+
+# gplot objects for individual survival years----
+surv_layers = 1998:2009
+surv_gplots = lapply(
+  which(daymet_years %in% surv_layers), 
+  function(x) gplot(subset(survival_brick, x), maxpixels = maxpixels))
+names(surv_gplots) = as.character(surv_layers)
+
+# gplot objects for multi-year mean survivals ----
+which(daymet_years %in% surv_layers)
+surv_mean_gplots = lapply(
+  which(daymet_years %in% surv_layers),
+  function(x){
+  print(x)  
+  gplot(
+    raster::calc(subset(survival_brick, subset = (x - lookback + 1):x), mean),
+    maxpixels = maxpixels)
+  } 
+)
+names(surv_mean_gplots) = as.character(surv_layers)
+
+
+surv_mean_gplots[["2001"]] + geom_raster(aes(fill = value), show.legend = T)
+
+dd = raster::calc(subset(survival_brick, subset = (x - lookback + 1):x), mean)
+plot(dd)
+
+# Survival row panels ----
+
+
+
 
 
 # Kill and survival in separate panels -----

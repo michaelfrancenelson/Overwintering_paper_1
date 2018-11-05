@@ -8,8 +8,8 @@
   # arima_models[type == "arima" & lookback == 1 & transform == "log"]
   # model_l = model_stats[1, ]$model  
   # retrieve the p-value from a list containing one arima model
-  model_l = models[64, ]$model[[1]]
-  model_l = models[54, ]$model[[1]]
+  # model_l = models[64, ]$model[[1]]
+  # model_l = models[54, ]$model[[1]]
   
   get_p = function(model_l)
   {

@@ -15,9 +15,9 @@
 {
   source("Globals.R")
   
-  national_forests_poly = readOGR(dsn = paste0(local_dat_dir, "national_forests_in_mpb_states"), layer = "national_forests_in_mpb_states")
+  national_forests_poly = readOGR(dsn = paste0(spatial_data_output_dir, "national_forests_in_mpb_states"), layer = "national_forests_in_mpb_states")
   
-  states_poly = readOGR(dsn = paste0(local_dat_dir, "mpb_states"), layer = "mpb_states")
+  states_poly = readOGR(dsn = paste0(spatial_data_output_dir, "mpb_states"), layer = "mpb_states")
   
   
   # pre-make ggplot objects for the polygons
@@ -25,8 +25,8 @@
   g_st = geom_polygon(data = states_poly, aes(long, lat, group = group), color = 1, fill = rgb(0, 0, 0, 0))
   
   # Individual years' survival and pine kill:
-  survival_brick = brick(paste0(local_dat_dir, "mpb_overwinter_survival_brick.nc"), crs = proj4_master)
-  pine_brick = brick(paste0(local_dat_dir, "pine_kill_western_US_brick.nc"), crs = proj4_master)
+  survival_brick = brick(paste0(spatial_data_output_dir, "mpb_overwinter_survival_brick.nc"), crs = proj4_master)
+  pine_brick = brick(paste0(spatial_data_output_dir, "pine_kill_western_US_brick.nc"), crs = proj4_master)
   names(survival_brick) = daymet_years[-1]
   names(pine_brick) = kill_years
   
@@ -526,7 +526,7 @@
   
 }
 
-# Figures with gtable ----
+# Multi panel Figures with gtable ----
 
 ggg_mean = ggplotGrob(ggplot_mean(map_scale, bar_scale))
 ggg_sd_truncated = ggplotGrob(ggplot_sd_truncated(map_scale, bar_scale))
@@ -534,7 +534,7 @@ ggg_pine_kill = ggplotGrob(ggplot_pine_sum(map_scale, bar_scale))
 
 g_all = cbind(ggg_mean, ggg_sd_truncated, ggg_pine_kill, size = "first")
 
-png("figures/summary_maps_panels_big.png", width = map_scale * 2.5 * width_png, height = map_scale * height_png)
+png("figures/figure_01_temp_kill_summaries_big.png", width = map_scale * 2.5 * width_png, height = map_scale * height_png)
 grid.newpage(); grid.draw(g_all)
 dev.off()
 
