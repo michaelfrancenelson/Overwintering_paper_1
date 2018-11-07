@@ -21,6 +21,10 @@
   # fwrite(pine_kill_table, file = paste0(local_dat_dir, "pine_kill_table.csv"))
   pine_kill_table = fread(paste0(local_dat_dir, "pine_kill_table.csv"))
   
+  # small subset of pine kill data for testing, and make sure some are at the max value ----
+  # pine_kill_table = pine_kill_table[sample(1:nrow(pine_kill_table), 100000)]
+  # for (i in kill_years) pine_kill_table[sample(1:nrow(pine_kill_table), 20), paste0("X", i) := 99999]
+  
   # state borders
   states_poly = readOGR(dsn = paste0(local_dat_dir, "mpb_states"), layer = "mpb_states")
   
@@ -128,40 +132,50 @@
 {
   
   # Which years to show in the individual year plots
-  surv_panel_years = as.character(c(2000, 2001, 2002))
-  # Which year to show in the multi-year mean plot
-  mean_surv_panel_year = 2002
+  surv_panel_years = as.character(2002 + 1:3)
   
+  # Which year to show in the multi-year mean plot
+  mean_surv_panel_year = 2005
+  
+  # color for the lon/lat lines
   lon_lat_col = gray(0.8, 0.4)
-  pine_point_size = 1.2
+  
+  # color for the state boundaries
+  state_boundary_col = gray(0.3, alpha = 1)
+  
+  # point size for the pine kill data
+  pine_point_size = 1.5
   
   # sets resolution for plotting the survival, use low value for faster speed
+  # maxpixels = 1e2
   maxpixels = 1e7
+  
+  # maximum pines killed per hectare for display. 
+  # All values above this are all grouped into one color
   max_kill = 1000
   
+  # number of years to include in the mean survival panels
   lookback = 10
   
-  g_rast_legend = geom_raster(aes(fill = value), show.legend = T)
+  # g_rast_legend = geom_raster(aes(fill = value), show.legend = T)
   g_rast_no_legend = geom_raster(aes(fill = value), show.legend = F)
   
-  # legend.margin = margin(0, 15, 0, 15)
-  # legend.box.margin = margin(-25, 40, 0, 40)
-  
-  # legend_bar_base_width = 18
-  # legend_bar_base_height = 1.5
-  
+  # Theme for the map panels
   t1 = theme(axis.text = element_blank(), axis.ticks = element_blank(), 
              panel.grid = element_blank(), panel.background = element_blank(),
              panel.border = element_rect(fill = NA),
              # panel.border = element_blank(),
              axis.title = element_blank())
   
+  # x- and y- limits for the map plot panels
   coords_square_panel = coord_equal(xlim = c(-2e6, 1e5), ylim = c(-1.1e6, 0.85e6), ratio = 1)
   
+  # labels/breaks for the legends
   breaks_pine_2k = c(2, 10, 100, 1000)
   breaks_surv = seq(0, 1, len = 6)
   labels_surv = paste0(100 * breaks_surv, "")
   
+  # settings for the heat color ramp for legends and pine kill data
   n_cols = 20
   color_length = 1000
   color_pow = 0.99
@@ -174,6 +188,7 @@
   indices = round(color_length * x)
   indices = rev(round(color_length * x))
   
+  # red/blue color ramp
   colours = rev(colorRampPalette(c(rgb(0.1, 0.1, 1), rgb(0.5, 0, 0.5), rgb(1, 0, 0)))(color_length)[indices])
   scale_pine_red_blue = scale_color_gradientn(
     colours = colours,
@@ -181,6 +196,7 @@
     breaks = log(breaks_pine_2k),
     labels = breaks_pine_2k)
   
+  # heat color ramp
   colours = rev(heat.colors(color_length + n_truncate))[-c(1:n_truncate)][sort(unique(indices))]
   scale_pine_heat  = scale_color_gradientn(
     colours = colours,
@@ -188,16 +204,18 @@
     breaks = log(breaks_pine_2k),
     labels = breaks_pine_2k)
   
-  
-  cols_surv = terrain.colors(10)[-c(5:7)]
+  # Color ramp for the survival maps ----
+  colors_surv_terrain = terrain.colors(10)[-c(5:7)]
+  colors_surv_gray = gray(seq(0.4, 0.85, len = 100))
+  colors_surv = colors_surv_gray
   
   scale_fill_surv = scale_fill_gradientn(
-    colours = cols_surv, 
+    colours = colors_surv, 
     na.value = rgb(0, 0, 0, 0), 
     breaks = breaks_surv, 
     labels = labels_surv)
   scale_col_surv = scale_color_gradientn(
-    colours = cols_surv, 
+    colours = colors_surv, 
     na.value = rgb(0, 0, 0, 0), 
     breaks = breaks_surv, 
     labels = labels_surv)
@@ -213,7 +231,7 @@
   states_poly_gray_1 = geom_polygon(
     data = states_poly,
     aes(long, lat, group = group),
-    color = gray(0, alpha = 0.15),
+    color = state_boundary_col,
     fill = rgb(0, 0, 0, 0))
 }
 
@@ -260,6 +278,100 @@
   # legend_row = cbind(ggplotGrob(leg_kill_gg), ggplotGrob(leg_surv_gg), size = "first")  
 }
 
+#  Panel titles ----
+{
+  
+  title_aspect_ratio = 1
+  surv_panel_years
+  panel_titles = c(surv_panel_years, paste0(mean_surv_panel_year, "\n(", lookback, " year mean survival)"))
+  print(panel_titles)
+  
+  sc_y_title = scale_y_continuous(expand = c(0, 0), limits = c(0.5, 1.5))
+  coord_title = coord_equal(ratio = legend_aspect_ratio)
+  
+  
+  
+  title_size = 12
+  
+  panel_titles_grob_list = function(title_size)
+  {
+    title_gg_list = lapply(1:4, function(i)
+      ggplot(data.frame(x = 0, y = 0)) + 
+        annotate(geom = "text", x = 0, y = 0,
+                 label = panel_titles[i], size = title_size) +
+        # sc_y_title + 
+        # coord_title + 
+        theme_void() 
+    )# theme(text = element_text(size = 16))
+    
+    title_grob_list = lapply(1:4, function(x) ggplotGrob(title_gg_list[[x]]))
+    # title_grob_list[["size"]] = "first"
+    
+    # title_row = do.call(cbind, args = title_grob_list)
+    # return(title_row)
+    return(title_grob_list)
+  }
+  
+  panel_titles_row = function(title_size)
+  {
+    g_list = panel_titles_grob_list(title_size)
+    g_list[["size"]] = "first"
+  }
+  # 
+  # tit_test = rbind(panel_titles_row(12), panel_titles_row(14), size = "first")
+  # tit_test$heights = c(unit(1, "npc"), unit(2, "npc"))  
+  # class(tit_test)
+  # tit_test
+  # plot(tit_test)  
+  # 
+  # 
+  # 
+  # w <- list(unit(1,"null"), unit(1,"null"))
+  # class(w) <-  c("unit.list", "unit")
+  # h <- unit(1, "in")
+  # gl1 <- grid.layout(1, 2, widths = w, heights = h,
+  #                    respect = TRUE)
+  # grid.newpage()
+  # grid.show.layout(gl1) # fine
+  # 
+  # w2 <- w
+  # w2[[1]] <- unit.pmax(unit(1,"null"), unit(1,"null"))
+  # gl2 <- grid.layout(1, 2, widths = w2, heights = h,
+  #                    respect = FALSE)
+  # grid.newpage()
+  # grid.show.layout(gl2)# fine
+  # 
+  # gl3 <- grid.layout(1, 2, widths = w2, heights = h,
+  #                    respect = TRUE)
+  # grid.newpage()
+  # grid.show.layout(gl3)
+  # 
+  # 
+  # grob_list = panel_titles_grob_list(1)
+  # grob_list_2 = panel_titles_grob_list(2)  
+  # 
+  # lmx = layout_matrix = rbind(
+  #   c(1, 1, 2, 2),
+  #   c(3, 4, 5, 6),
+  #   c(1, 1, 1, 1) * 7
+  # )
+  # 
+  # grobs = grob_list
+  # grob_list[[5]] = grob_list_2[[3]]
+  # grob_list[[6]] = grob_list_2[[2]]
+  # grob_list[[7]] = grob_list_2[[4]]
+  # 
+  # gt = arrangeGrob(grobs = grob_list, layout_matrix = lmx)    
+  # gt$heights = c(
+  #   unit(1, "npc"),
+  #   unit(1, "npc"),
+  #   unit(2, "npc")
+  #   )
+  # grid.newpage()
+  # grid.draw(gt)    
+  
+}
+
 # survival gplot objects ----
 surv_layers = 1998:2009
 surv_gplots = lapply(
@@ -288,10 +400,7 @@ pine_log_gpoint_list = list(
   pine_log_gpoint(mean_surv_panel_year, sz = pine_point_size)
 )
 
-
-
-# Survival, kill rows ----
-
+# Survival only panel row ----
 surv_gg_list = 
   list(
     plot_surv_gg(surv_panel_years[1], surv_gplots),
@@ -301,61 +410,195 @@ surv_gg_list =
   )
 
 surv_grob_list = lapply(1:4, function(x) ggplotGrob(surv_gg_list[[x]]))
-surv_grob_list[["size"]] = "first"
+# surv_grob_list[["size"]] = "first"
 
-surv_row = do.call(cbind, args = surv_grob_list)
+surv_row = do.call(cbind, args = c(surv_grob_list, size = "first"))
 
-# survival/kill row
+# Survival/kill panel row ----
 pine_log_surv_gg_list_heat = lapply(1:4, function(x) surv_gg_list[[x]] + pine_log_gpoint_list[[x]] + scale_pine_heat)
 pine_log_surv_grob_list_heat = lapply(1:4, function(x) ggplotGrob(pine_log_surv_gg_list_heat[[x]]))
-pine_log_surv_grob_list_heat[["size"]] = "first"
-pine_log_surv_row_heat = do.call(cbind, args = pine_log_surv_grob_list_heat)
+# pine_log_surv_grob_list_heat[["size"]] = "first"
 
 pine_log_surv_gg_list_red_blue = lapply(1:4, function(x) surv_gg_list[[x]] + pine_log_gpoint_list[[x]] + scale_pine_red_blue)
 pine_log_surv_grob_list_red_blue = lapply(1:4, function(x) ggplotGrob(pine_log_surv_gg_list_red_blue[[x]]))
-pine_log_surv_grob_list_red_blue[["size"]] = "first"
-pine_log_surv_row_red_blue = do.call(cbind, args = pine_log_surv_grob_list_red_blue)
+# pine_log_surv_grob_list_red_blue[["size"]] = "first"
+
+pine_log_surv_row_heat = do.call(cbind, args = c(pine_log_surv_grob_list_heat, size = "first"))
+pine_log_surv_row_red_blue = do.call(cbind, args = c(pine_log_surv_grob_list_red_blue, size = "first"))
 
 
 # grid.newpage()
 # grid.draw(pine_log_surv_row_panels)
 
 # Complete figure  ----
-dpi_adj = png_height / 72
+{
+  
+  png_height = 1600
+  png_aspect = 2.2
+  
+  dpi_adj = png_height / 72
+  
+  height_1 = 8
+  height_2 = 1.12
+  
+  title_height = 1
+  map_height = 4
+  legend_height = 1.2
+  
+  
+  layout_mx = matrix(rbind(
+    c(1, 2, 3, 4), # the titles
+    c(5, 6, 7, 8), # the survival only maps
+    c(9, 10, 11, 12), # the survival/kill maps
+    c(13, 13, 14, 14) # the legends
+  ), nrow = 4)
+  
+  gp_red_blue = c(
+    panel_titles_grob_list( title_size * 0.001 * png_height),
+    surv_grob_list[1:4],
+    pine_log_surv_gg_list_red_blue[1:4],
+    list(ggplotGrob(leg_kill(dpi_adj * 2, dpi_adj * 1.8, scale_pine_red_blue)),
+         ggplotGrob(leg_surv(dpi_adj * 2, dpi_adj * 1.8)))
+  )
+  
+  gp_heat = c(
+    panel_titles_grob_list( title_size * 0.001 * png_height),
+    surv_grob_list[1:4],
+    pine_log_surv_gg_list_heat[1:4],
+    list(ggplotGrob(leg_kill(dpi_adj * 2, dpi_adj * 1.8, scale_pine_heat)),
+         ggplotGrob(leg_surv(dpi_adj * 2, dpi_adj * 1.8)))
+  )
+  
+  
+  gt_red_blue = arrangeGrob(grobs = gp_red_blue, layout_matrix = layout_mx)
+  gt_heat = arrangeGrob(grobs = gp_heat, layout_matrix = layout_mx)
+  
+  title_height = 1
+  map_height = 5
+  legend_height = 1.2
+  
+  gt_red_blue$heights = gt_heat$heights = 
+    c(
+      unit(title_height, "npc"), 
+      unit(map_height, "npc"), 
+      unit(map_height, "npc"),
+      unit(legend_height, "npc")
+    )
+  
+  png_height = 2000
+  png_aspect = 2
+  
+  {
+    png("PNAS_Figures/figure_3_red_blue_gray.png", width = png_aspect * png_height, height = png_height)
+    grid.newpage()
+    # plot(gt_red_blue)
+    grid.draw(gt_red_blue)
+    dev.off()
+  }
+  {
+    png("PNAS_Figures/figure_3_heat_gray.png", width = png_aspect * png_height, height = png_height)
+    grid.newpage()
+    # plot(gt_heat)
+    grid.draw(gt_heat)
+    dev.off()
+  }  
+  
+  
+  
+}
 
-png_height = 1600
-png_aspect = 2
-
-height_1 = 7
-height_2 = 1.2
-
-maps_red_blue = rbind(surv_row, pine_log_surv_row_red_blue, size = "first")
-maps_heat = rbind(surv_row, pine_log_surv_row_heat, size = "first")
-
-legends_heat = cbind(
-  ggplotGrob(leg_kill(dpi_adj * 2, dpi_adj * 1.8, scale_pine_heat)),
-  ggplotGrob(leg_surv(dpi_adj * 2, dpi_adj * 1.8)),
-  size = "first")
-
-legends_red_blue = cbind(
-  ggplotGrob(leg_kill(dpi_adj * 2, dpi_adj * 1.8, scale_pine_red_blue)),
-  ggplotGrob(leg_surv(dpi_adj * 2, dpi_adj * 1.8)),
-  size = "first")
-
-fig_heat = rbind(arrangeGrob(maps_heat), arrangeGrob(legends_heat))
-fig_red_blue = rbind(arrangeGrob(maps_red_blue), arrangeGrob(legends_red_blue))
-
-fig_heat$heights = c(unit(height_1, "npc"), unit(height_2, "npc"))
-fig_red_blue$heights = c(unit(height_1, "npc"), unit(height_2, "npc"))
-
-
-png("PNAS_Figures/figure_3_heat.png", width = png_aspect * png_height, height = png_height)
-grid.draw(fig_heat)
-dev.off()
-
-
-png("PNAS_Figures/figure_3_red_blue.png", width = png_aspect * png_height, height = png_height)
-grid.draw(fig_red_blue)
-dev.off()
-
-
+#   
+#   
+#   
+#   
+#   
+#   
+#   
+#   
+#   
+#   
+#   
+#   
+#   
+#   
+#   
+#   
+#     
+#   # gt = arrangeGrob(grobs = grob_list, layout_matrix = lmx)    
+#   # gt$heights = c(
+#   #   unit(1, "npc"),
+#   #   unit(1, "npc"),
+#   #   unit(2, "npc")
+#   #   )
+#   # grid.newpage()
+#   # grid.draw(gt)
+# 
+#   
+#   
+#   
+#     maps_red_blue = 
+#     rbind(
+#       arrangeGrob(panel_titles_row(title_size = title_size * 0.001 * png_height)), 
+#       arrangeGrob(surv_row), 
+#       arrangeGrob(pine_log_surv_row_red_blue), 
+#       arrangeGrob(legends_red_blue),
+#       size = "first")
+#   
+#   
+#   maps_red_blue = rbind(
+#     panel_titles_row(title_size = title_size * 0.001 * png_height), 
+#     surv_row, 
+#     pine_log_surv_row_red_blue, 
+#     size = "first"
+#   )
+#   
+#   maps_red_blue$heights = c(
+#     unit(title_height, "npc"), 
+#     unit(map_height, "npc"), 
+#     unit(map_height, "npc")
+#   )
+#   
+#   
+#   
+#   # maps_red_blue$heights = c(
+#   #   unit(title_height, "npc"), 
+#   #   unit(map_height, "npc"), 
+#   #   unit(map_height, "npc"),
+#   #   unit(legend_height, "npc"))
+#   # 
+#   png("PNAS_Figures/figure_3_test.png", width = png_aspect * png_height, height = png_height)
+#   # grid.draw(fig_heat)
+#   grid.draw(arrangeGrob(maps_red_blue))
+#   dev.off()
+#   
+#   
+#   maps_heat = rbind(surv_row, pine_log_surv_row_heat, size = "first")
+#   
+#   legends_heat = cbind(
+#     ggplotGrob(leg_kill(dpi_adj * 2, dpi_adj * 1.8, scale_pine_heat)),
+#     ggplotGrob(leg_surv(dpi_adj * 2, dpi_adj * 1.8)),
+#     size = "first")
+#   
+#   legends_red_blue = cbind(
+#     ggplotGrob(leg_kill(dpi_adj * 2, dpi_adj * 1.8, scale_pine_red_blue)),
+#     ggplotGrob(leg_surv(dpi_adj * 2, dpi_adj * 1.8)),
+#     size = "first")
+#   
+#   fig_heat = rbind(arrangeGrob(maps_heat), arrangeGrob(legends_heat))
+#   fig_red_blue = rbind(arrangeGrob(maps_red_blue), arrangeGrob(legends_red_blue))
+#   
+#   fig_heat$heights = c(unit(height_1, "npc"), unit(height_2, "npc"))
+#   fig_red_blue$heights = c(unit(height_1, "npc"), unit(height_2, "npc"))
+#   
+#   
+#   png("PNAS_Figures/figure_3_heat_gray.png", width = png_aspect * png_height, height = png_height)
+#   grid.draw(fig_heat)
+#   # grid.draw(maps_red_blue)
+#   dev.off()
+#   
+#   png("PNAS_Figures/figure_3_red_blue_gray.png", width = png_aspect * png_height, height = png_height)
+#   grid.draw(fig_red_blue)
+#   dev.off()
+#   
+# }
+# 
